@@ -4,10 +4,8 @@ import Expo from 'expo';
 import ExpoTHREE, { THREE } from 'expo-three';
 import ExpoGraphics from 'expo-graphics';
 import { MaterialCommunityIcons as Icon } from 'react-native-vector-icons';
-import GooglePoly from './../api/GooglePoly';
-import ApiKeys from './../constants/ApiKeys';
-import TurkeyObject from './../assets/objects/TurkeyObject.json';
-import { SearchableGooglePolyAssetList } from './../components/AppComponents';
+import Sketchfab from './../api/Sketchfab';
+import { SearchableSketchfabAssetList } from './../components/AppComponents';
 
 console.disableYellowBox = true; 
 
@@ -18,12 +16,10 @@ export default class HomeScreen extends React.Component {
 
   constructor(props) {
     super(props);
-
-    this.googlePoly = new GooglePoly(ApiKeys.GooglePoly);
     this.state = {
       searchModalVisible: false,
-      currentAsset: TurkeyObject,
-    }
+      currentAsset: null,
+    };
   }
 
   onContextCreate = async ({gl, scale, width, height, arSession}) => {
@@ -45,7 +41,6 @@ export default class HomeScreen extends React.Component {
   }
 
   onRender = (delta) => {
-
     // Rotate the object...
     if (this.threeModel) {
       this.threeModel.rotation.x += 2 * delta;
@@ -56,19 +51,18 @@ export default class HomeScreen extends React.Component {
     this.renderer.render(this.scene, this.camera);
   }
 
-  onAddObjectPress = () => {
+  onAddObjectPress = async () => {
     // Remove the current object...
     this.onRemoveObjectPress();
 
     // Add the current object...
-    GooglePoly.getThreeModel(this.state.currentAsset, function(object) {
-      this.threeModel = object;
-      ExpoTHREE.utils.scaleLongestSideToSize(object, 0.75);
-      object.position.z = -3;
-      this.scene.add(object);
-    }.bind(this), function(error) {
-      console.log(error);
-    });
+    const asset = await Sketchfab.getModel(this.state.currentAsset.uid);
+    const object = await ExpoTHREE.loadAsync(asset.downloads.gltf.url);
+
+    this.threeModel = object;
+    ExpoTHREE.utils.scaleLongestSideToSize(object, 0.75);
+    object.position.z = -3;
+    this.scene.add(object);
   }
 
   onRemoveObjectPress = () => {
@@ -91,7 +85,6 @@ export default class HomeScreen extends React.Component {
   }
 
   render() {
-
     return (
       <View style={{flex:1}}>
         <ExpoGraphics.View style={{flex:1}}
@@ -109,19 +102,15 @@ export default class HomeScreen extends React.Component {
         </View>
 
         <Modal visible={this.state.searchModalVisible} animationType="slide">
-          <SearchableGooglePolyAssetList 
-            googlePoly={this.googlePoly} 
+          <SearchableSketchfabAssetList 
+            sketchfab={Sketchfab} 
             onCancelPress={this.onCancelPress}
             onAssetPress={this.onAssetPress}
           />
         </Modal>
-
       </View>
     );
   }
-
 }
 
-const styles = StyleSheet.create({
-  
-});
+const styles = StyleSheet.create({});
